@@ -191,7 +191,15 @@ private:
     void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
         last_scan_ = msg;
     }
-trol_loop_count_++;
+
+    // ============================================================================
+    // CONTROL LOOP
+    // ============================================================================
+
+    void control_loop() {
+        if (!odom_received_ || !path_active_ || trajectory_.empty()) return;
+        
+        control_loop_count_++;
         const double goal_reached_wait_time = 1.0; // seconds
         double elapsed = (this->now() - start_time_).seconds();
         
@@ -239,7 +247,29 @@ trol_loop_count_++;
         static int log_counter = 0;
         if (log_counter++ % 20 == 0) {
              RCLCPP_INFO(this->get_logger(), 
-                         ">>> [CONTROL
+                         ">>> [CONTROL] Time=%.1fs | V=%.2f m/s | W=%.2f rad/s | DistErr=%.3fm | AngErr=%.2f rad",
+                         elapsed, v_cmd, w_cmd, last_dist_error_, last_ang_error_);
+        }
+
+        // Publish command
+        geometry_msgs::msg::Twist cmd;
+        cmd.linear.x = v_cmd;
+        cmd.angular.z = w_cmd;
+        cmd_vel_pub_->publish(cmd);
+        cmd_vel_pub_count_++;
+
+        // Publish diagnostics every 50 cycles (~2.5 seconds)
+        if (control_loop_count_ % 50 == 0) {
+            publish_diagnostics();
+        }
+    }
+
+    // ============================================================================
+    // UTILITY FUNCTIONS
+    // ============================================================================
+
+    void stop_robot() {
+        geometry_msgs::msg::Twist cmd;
         cmd.linear.x = 0;
         cmd.angular.z = 0;
         cmd_vel_pub_->publish(cmd);
@@ -291,29 +321,7 @@ trol_loop_count_++;
         status.values.push_back(kv);
 
         diag_array.status.push_back(status);
-        diag_pub_->publish(diag_array v_cmd, w_cmd, last_dist_error_, last_ang_err_);
-        }
-
-        // Publish command
-        geometry_msgs::msg::Twist cmd;
-        cmd.linear.x = v_cmd;
-        cmd.angular.z = w_cmd;
-        cmd_vel_pub_->publish(cmd);
-        cmd_vel_pub_count_++;
-
-        // Publish diagnostics every 50 cycles (~2.5 seconds)
-        if (control_loop_count_ % 50 == 0) {
-            publish_diagnostics();
-        }
-
-        geometry_msgs::msg::Twist cmd;
-        cmd.linear.x = v_cmd; cmd.angular.z = w_cmd;
-        cmd_vel_pub_->publish(cmd);
-    }
-    
-    void stop_robot() {
-        geometry_msgs::msg::Twist cmd; cmd.linear.x = 0; cmd.angular.z = 0;
-        cmd_vel_pub_->publish(cmd);
+        diag_pub_->publish(diag_array);
     }
 };
 
