@@ -18,14 +18,12 @@ def generate_launch_description():
         )
     )
 
-    # 3. Your Controller Node (The Cruiser)
-    # This is the node that fulfills your assignment requirements.
+    # 3. Controller Node (The Cruiser)
     cruiser_cmd = Node(
         package="the_cruiser",
         executable="cruiser_node",
         name="cruiser_node",
         output="screen",
-        # You can set your controller parameters here
         parameters=[{"max_v": 0.7, "max_w": 1.5, "kp_lin": 1.2, "kp_ang": 2.0}],
     )
 
