@@ -21,6 +21,7 @@ include_directories(include)
 # 3. The Logic Library (Layer 2 & 3)
 add_library(${PROJECT_NAME}_lib
   src/implementations/catmull_rom_generator.cpp
+  src/implementations/passive_safety_strategy.cpp
 )
 target_include_directories(${PROJECT_NAME}_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
