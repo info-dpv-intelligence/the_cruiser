@@ -1,0 +1,41 @@
+cd ~/dev/ros2_ws
+source install/setup.zsh
+export TURTLEBOT3_MODEL=waffle
+
+ros2 launch nav2_bringup navigation_launch.py \
+  use_sim_time:=True \
+  params_file:=/opt/ros/humble/share/nav2_bringup/params/nav2_params.yaml \
+  map:=/opt/ros/humble/share/turtlebot3_navigation2/map/map.yaml
+
+
+T2:
+cd ~/dev/ros2_ws
+source install/setup.zsh
+export TURTLEBOT3_MODEL=waffle
+
+# Show which nodes are publishing to /cmd_vel
+echo "=== CURRENT PUBLISHERS ON /cmd_vel ==="
+ros2 topic info /cmd_vel
+
+echo ""
+echo "=== BW/FREQUENCY ON /cmd_vel (10 seconds) ==="
+timeout 10 ros2 topic bw /cmd_vel
+
+echo ""
+echo "=== CHECKING CONTROLLER_SERVER LIFECYCLE STATE ==="
+ros2 lifecycle get /controller_server
+
+echo ""
+echo "=== CHECKING FOR /cruiser_node ==="
+ros2 lifecycle get /cruiser_node 2>&1 || echo "❌ cruiser_node not found (expected if not launched yet)"
+
+
+---
+
+
+cd ~/dev/ros2_ws
+source install/setup.zsh
+export TURTLEBOT3_MODEL=waffle
+
+echo "🚀 LAUNCHING THE CRUISER..."
+ros2 launch the_cruiser cruiser_launch.py
