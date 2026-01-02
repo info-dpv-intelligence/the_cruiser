@@ -1,5 +1,5 @@
 # Make the verification script executable
-chmod +x ~/dev/ros2_ws/src/the_cruiser/scripts/verify_control.sh
+chmod +x ~/dev/ros2_ws/src/internal/the_cruiser/scripts/verify_control.sh
 
 # Build the package
 cd ~/dev/ros2_ws
@@ -37,4 +37,4 @@ ros2 launch the_cruiser cruiser_standalone.launch.py
 # Terminal 3: Run verification (after setting a Nav Goal)
 cd ~/dev/ros2_ws
 source install/setup.zsh
-~/dev/ros2_ws/src/the_cruiser/scripts/verify_control.sh
+~/dev/ros2_ws/src/internal/the_cruiser/scripts/verify_control.sh
