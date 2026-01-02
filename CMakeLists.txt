@@ -13,6 +13,7 @@ find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(angles REQUIRED)
 
 # 2. Include Directories
 include_directories(include)
@@ -41,6 +42,7 @@ ament_target_dependencies(cruiser_node
   geometry_msgs
   sensor_msgs
   tf2_ros
+  angles
 )
 
 # 5. TESTING (INSERTED HERE - BEFORE Install/Package)

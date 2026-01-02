@@ -9,9 +9,9 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Matrix3x3.h"
+#include "angles/angles.h"
 
 #include "the_cruiser/implementations/catmull_rom_generator.hpp"
-#include "the_cruiser/implementations/passive_safety_strategy.hpp"
 
 using namespace std::chrono_literals;
 
@@ -19,7 +19,6 @@ class CruiserNode : public rclcpp::Node {
 public:
     CruiserNode() : Node("cruiser_node") {
         trajectory_generator_ = std::make_shared<the_cruiser::implementations::CatmullRomGenerator>();
-        safety_strategy_ = std::make_shared<the_cruiser::implementations::PassiveSafetyStrategy>();
 
         this->declare_parameter("max_v", 0.7);
         this->declare_parameter("max_w", 1.5);
@@ -42,7 +41,6 @@ public:
 
 private:
     std::shared_ptr<the_cruiser::interfaces::ITrajectoryGenerator> trajectory_generator_;
-    std::shared_ptr<the_cruiser::interfaces::ISafetyStrategy> safety_strategy_;
     
     std::vector<the_cruiser::types::TrajectoryPoint> trajectory_;
     double x_ = 0.0, y_ = 0.0, th_ = 0.0;
@@ -72,12 +70,13 @@ private:
         RCLCPP_INFO(this->get_logger(), ">>> [OUTPUT] Catmull-Rom Spline Generated: %zu points (Smooth)", trajectory_.size());
         RCLCPP_INFO(this->get_logger(), ">>> [PHYSICS] Estimated Travel Time: %.2f seconds", trajectory_.back().t);
 
-        nav_msgs::msg::Path smooth_msg = *msg;
-        smooth_msg.header.stamp = this->now();
-        smooth_msg.poses.clear();
+        nav_msgs::msg::Path smooth_msg;
+        smooth_msg.header = msg->header;
+        smooth_msg.header.stamp = this->now(); // Update timestamp to now
         for(const auto& pt : trajectory_) {
             geometry_msgs::msg::PoseStamped ps;
-            ps.pose.position.x = pt.x; ps.pose.position.y = pt.y;
+            ps.pose.position.x = pt.x;
+            ps.pose.position.y = pt.y;
             smooth_msg.poses.push_back(ps);
         }
         path_pub_->publish(smooth_msg);
@@ -100,10 +99,11 @@ private:
     void control_loop() {
         if (!odom_received_ || !path_active_ || trajectory_.empty()) return;
         
+        const double goal_reached_wait_time = 1.0; // seconds
         double elapsed = (this->now() - start_time_).seconds();
         
         // Check if finished
-        if (elapsed > trajectory_.back().t + 1.0) {
+        if (elapsed > trajectory_.back().t + goal_reached_wait_time) {
             stop_robot(); path_active_ = false;
             RCLCPP_WARN(this->get_logger(), ">>> [COMPLETE] Goal Reached. Final Error: %.3fm", 0.0); // Simple log
             return;
@@ -115,9 +115,7 @@ private:
         double dx = target.x - x_;
         double dy = target.y - y_;
         double dist_err = std::hypot(dx, dy);
-        double ang_err = std::atan2(dy, dx) - th_;
-        while(ang_err > M_PI) ang_err -= 2*M_PI;
-        while(ang_err < -M_PI) ang_err += 2*M_PI;
+        double ang_err = angles::normalize_angle(std::atan2(dy, dx) - th_);
 
         double v_cmd = this->get_parameter("kp_lin").as_double() * dist_err;
         if (std::abs(ang_err) > 1.0) v_cmd = 0.0;
