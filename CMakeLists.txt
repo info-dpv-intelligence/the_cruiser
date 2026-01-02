@@ -40,13 +40,13 @@ ament_target_dependencies(${PROJECT_NAME}_lib
 # 4. The Node Executable (Layer 4)
 add_executable(cruiser_node src/nodes/cruiser_node.cpp)
 target_link_libraries(cruiser_node ${PROJECT_NAME}_lib angles::angles)
-amrclcpp_lifecycle
+ament_target_dependencies(cruiser_node
+  rclcpp
+  rclcpp_lifecycle
   nav_msgs
   geometry_msgs
   sensor_msgs
-  diagnosticgs
-  geometry_msgs
-  sensor_msgs
+  diagnostic_msgs
   tf2_ros
   angles
 )
