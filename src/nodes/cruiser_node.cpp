@@ -6,19 +6,23 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "angles/angles.h"
 
 #include "the_cruiser/implementations/catmull_rom_generator.hpp"
+#include "the_cruiser/implementations/passive_safety_strategy.hpp"
 
 using namespace std::chrono_literals;
 
 class CruiserNode : public rclcpp::Node {
 public:
     CruiserNode() : Node("cruiser_node") {
+        // Inject the algorithm implementations
         trajectory_generator_ = std::make_shared<the_cruiser::implementations::CatmullRomGenerator>();
+        safety_strategy_ = std::make_shared<the_cruiser::implementations::PassiveSafetyStrategy>();
 
         this->declare_parameter("max_v", 0.7);
         this->declare_parameter("max_w", 1.5);
@@ -34,6 +38,9 @@ public:
         global_plan_sub_ = this->create_subscription<nav_msgs::msg::Path>(
             "/plan", 10, std::bind(&CruiserNode::plan_callback, this, std::placeholders::_1));
 
+        scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+            "/scan", rclcpp::SensorDataQoS(), std::bind(&CruiserNode::scan_callback, this, std::placeholders::_1));
+
         timer_ = this->create_wall_timer(50ms, std::bind(&CruiserNode::control_loop, this));
         
         RCLCPP_INFO(this->get_logger(), "CRUISER ONLINE. Ready to Smooth.");
@@ -41,17 +48,20 @@ public:
 
 private:
     std::shared_ptr<the_cruiser::interfaces::ITrajectoryGenerator> trajectory_generator_;
+    std::shared_ptr<the_cruiser::interfaces::ISafetyStrategy> safety_strategy_;
     
     std::vector<the_cruiser::types::TrajectoryPoint> trajectory_;
     double x_ = 0.0, y_ = 0.0, th_ = 0.0;
     bool odom_received_ = false;
     bool path_active_ = false;
+    sensor_msgs::msg::LaserScan::SharedPtr last_scan_;
     rclcpp::Time start_time_;
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr global_plan_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
     void plan_callback(const nav_msgs::msg::Path::SharedPtr msg) {
@@ -96,6 +106,10 @@ private:
         odom_received_ = true;
     }
 
+    void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
+        last_scan_ = msg;
+    }
+
     void control_loop() {
         if (!odom_received_ || !path_active_ || trajectory_.empty()) return;
         
@@ -125,6 +139,12 @@ private:
         double max_w = this->get_parameter("max_w").as_double();
         v_cmd = std::max(std::min(v_cmd, max_v), -max_v);
         w_cmd = std::max(std::min(w_cmd, max_w), -max_w);
+
+        // --- Apply Safety Strategy ---
+        if (last_scan_ && safety_strategy_) {
+            auto safety_command = safety_strategy_->calculate_safety(last_scan_);
+            v_cmd *= safety_command.speed_scale;
+        }
 
         static int log_counter = 0;
         if (log_counter++ % 20 == 0) {
