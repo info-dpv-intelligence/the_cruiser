@@ -1,41 +1,40 @@
+# Make the verification script executable
+chmod +x ~/dev/ros2_ws/src/the_cruiser/scripts/verify_control.sh
+
+# Build the package
+cd ~/dev/ros2_ws
+colcon build --packages-select the_cruiser
+
+
+----
+
+# Source the new build
+source ~/dev/ros2_ws/install/setup.zsh
+
+# Check that the new executable exists
+which cruiser_node
+
+# Verify the lifecycle node loads correctly (should not error)
+ros2 lifecycle list /cruiser_node 2>&1 | head -20
+
+----
+
+# Terminal 1: Start Gazebo + Nav2
 cd ~/dev/ros2_ws
 source install/setup.zsh
 export TURTLEBOT3_MODEL=waffle
-
 ros2 launch nav2_bringup navigation_launch.py \
   use_sim_time:=True \
   params_file:=/opt/ros/humble/share/nav2_bringup/params/nav2_params.yaml \
   map:=/opt/ros/humble/share/turtlebot3_navigation2/map/map.yaml
 
-
-T2:
+# Terminal 2: Launch Cruiser with coordination
 cd ~/dev/ros2_ws
 source install/setup.zsh
 export TURTLEBOT3_MODEL=waffle
+ros2 launch the_cruiser cruiser_standalone.launch.py
 
-# Show which nodes are publishing to /cmd_vel
-echo "=== CURRENT PUBLISHERS ON /cmd_vel ==="
-ros2 topic info /cmd_vel
-
-echo ""
-echo "=== BW/FREQUENCY ON /cmd_vel (10 seconds) ==="
-timeout 10 ros2 topic bw /cmd_vel
-
-echo ""
-echo "=== CHECKING CONTROLLER_SERVER LIFECYCLE STATE ==="
-ros2 lifecycle get /controller_server
-
-echo ""
-echo "=== CHECKING FOR /cruiser_node ==="
-ros2 lifecycle get /cruiser_node 2>&1 || echo "❌ cruiser_node not found (expected if not launched yet)"
-
-
----
-
-
+# Terminal 3: Run verification (after setting a Nav Goal)
 cd ~/dev/ros2_ws
 source install/setup.zsh
-export TURTLEBOT3_MODEL=waffle
-
-echo "🚀 LAUNCHING THE CRUISER..."
-ros2 launch the_cruiser cruiser_launch.py
+~/dev/ros2_ws/src/the_cruiser/scripts/verify_control.sh
