@@ -12,7 +12,7 @@ find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(tf2 REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 # 2. Include Directories
 include_directories(include)
@@ -40,8 +40,7 @@ ament_target_dependencies(cruiser_node
   nav_msgs
   geometry_msgs
   sensor_msgs
-  tf2
-  tf2_geometry_msgs
+  tf2_ros
 )
 
 # 5. TESTING (INSERTED HERE - BEFORE Install/Package)
@@ -60,7 +59,7 @@ endif()
 install(TARGETS ${PROJECT_NAME}_lib cruiser_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  RUNTIME DESTINATION lib/${PROJECT_NAME}
+  RUNTIME DESTINATION lib/${PROJECT_NAME} # Installs the executable
 )
 
 install(DIRECTORY include/
@@ -74,4 +73,5 @@ install(DIRECTORY launch config
 # 7. Export and Package
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME}_lib)
+
 ament_package()
