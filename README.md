@@ -21,7 +21,7 @@ The codebase is organized into three distinct layers to ensure modularity and te
 
 **Dependency Graph:**
 
-```
+```mermaid
 graph TD
     A[Types] -- "Used by" --> B[Interfaces]
     B -- "Implemented by" --> C[Implementations]
@@ -44,29 +44,22 @@ The system operates as a middleware controller in the standard ROS 2 Navigation 
 * ROS 2 Humble (Ubuntu 22.04)
 * TurtleBot3 Simulation Package
 
-### Setup
+## 🚀 Quick Start (Automated)
 
-    # Setup Workspace
+### Setup Workspace
     mkdir -p ~/ros2_ws/src && cd ~/ros2_ws/src
-    git clone <REPO_URL>
+    git clone https://github.com/info-dpv-intelligence/the_cruiser.git
 
-    # Build
-    cd ~/ros2_ws
-    colcon build --packages-select the_cruiser
-    source install/setup.bash
+### Run Master Demo Script
+    cd ~/ros2_ws/src/the_cruiser
+    chmod +x scripts/demo.sh
+    ./scripts/demo.sh
 
----
+*Note: This script detects your workspace, builds the package, sources the environment, and opens Gazebo/Nav2/Cruiser in separate tabs.*
 
 ## Usage
 
 This package runs alongside the standard TurtleBot3 simulation. It requires the standard Nav2 stack for mapping/planning, but disables the default controller to execute its own trajectory logic.
-
-### Quick Start (Script)
-A helper script is provided to launch the simulation, navigation stack, and controller in separate terminal tabs.
-
-    cd src/the_cruiser/scripts
-    chmod +x demo.sh
-    ./demo.sh
 
 ### Manual Launch
 
