@@ -1,6 +1,6 @@
 import os
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess
+from launch.actions import ExecuteProcess, TimerAction
 from launch_ros.actions import Node
 
 
@@ -35,24 +35,41 @@ def generate_launch_description():
 
     # ========================================================================
     # LIFECYCLE COORDINATION
-    # Use lifecycle_manager to handle state transitions automatically
+    # Configure Cruiser (UNCONFIGURED → CONFIGURED)
+    # Deactivate Nav2 controller_server
+    # Activate Cruiser (CONFIGURED → ACTIVE)
     # ========================================================================
-    lifecycle_mgr = Node(
-        package="lifecycle_manager",
-        executable="lifecycle_manager",
-        name="lifecycle_manager",
-        output="screen",
-        parameters=[
-            {"node_names": ["cruiser_node"]},
-            {"autostart": True},
+    configure_cruiser = TimerAction(
+        period=2.0,
+        actions=[
+            ExecuteProcess(
+                cmd=["ros2", "lifecycle", "set", "/cruiser_node", "configure"],
+                output="screen",
+                shell=False,
+            )
         ],
     )
 
-    # Deactivate Nav2 controller_server (one-time command)
-    deactivate_nav2_controller = ExecuteProcess(
-        cmd=["ros2", "lifecycle", "set", "/controller_server", "deactivate"],
-        output="screen",
-        shell=False,
+    deactivate_nav2_controller = TimerAction(
+        period=2.5,
+        actions=[
+            ExecuteProcess(
+                cmd=["ros2", "lifecycle", "set", "/controller_server", "deactivate"],
+                output="screen",
+                shell=False,
+            )
+        ],
+    )
+
+    activate_cruiser = TimerAction(
+        period=3.0,
+        actions=[
+            ExecuteProcess(
+                cmd=["ros2", "lifecycle", "set", "/cruiser_node", "activate"],
+                output="screen",
+                shell=False,
+            )
+        ],
     )
 
     # ========================================================================
@@ -61,7 +78,8 @@ def generate_launch_description():
     return LaunchDescription(
         [
             cruiser_node,
-            lifecycle_mgr,
+            configure_cruiser,
             deactivate_nav2_controller,
+            activate_cruiser,
         ]
     )
