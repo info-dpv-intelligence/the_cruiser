@@ -8,7 +8,12 @@ CatmullRomGenerator::CatmullRomGenerator()
     : step_size_(0.2), max_vel_(1.0), max_acc_(0.5) {}
 
 std::vector<types::TrajectoryPoint> CatmullRomGenerator::smooth(const std::vector<geometry_msgs::msg::Point>& waypoints) {
-    if (waypoints.size() < 4) return {};
+    if (waypoints.size() < 2) return {};
+    
+    if (waypoints.size() < 4) {
+        // For < 4 points, just return a linear interpolation without Catmull-Rom
+        return apply_trapezoidal_profile(waypoints);
+    }
 
     std::vector<geometry_msgs::msg::Point> dense_path;
     std::vector<geometry_msgs::msg::Point> padded_path = waypoints;
