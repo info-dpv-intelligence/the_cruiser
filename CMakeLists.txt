@@ -64,10 +64,13 @@ if(BUILD_TESTING)
 endif()
 
 # 6. Install Rules
-install(TARGETS ${PROJECT_NAME}_lib cruiser_node
+install(TARGETS ${PROJECT_NAME}_lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  RUNTIME DESTINATION lib/${PROJECT_NAME} # Installs the executable
+)
+
+install(TARGETS cruiser_node
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY include/
