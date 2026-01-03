@@ -1,76 +1,27 @@
 import os
 from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription, LaunchContext
-from launch.actions import IncludeLaunchDescription, ExecuteProcess, OpaqueFunction
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch import LaunchDescription
+from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
-
-
-def launch_cruiser(context: LaunchContext, *args, **kwargs):
-    """
-    Deactivate Nav2's controller_server and activate Cruiser
-    This is called after all nodes have been spawned to ensure proper coordination.
-    """
-    actions = [
-        ExecuteProcess(
-            cmd=["ros2", "lifecycle", "set", "/controller_server", "deactivate"],
-            output="screen",
-            shell=False,
-        ),
-        ExecuteProcess(
-            cmd=["ros2", "lifecycle", "set", "/cruiser_node", "activate"],
-            output="screen",
-            shell=False,
-        ),
-    ]
-    return actions
 
 
 def generate_launch_description():
     """
-    Complete launch description for The Cruiser with Nav2.
+    Launch The Cruiser Controller Node with RViz.
 
-    Workflow:
-    1. Start Gazebo simulation (TurtleBot3)
-    2. Start Nav2 (with controller_server in CONFIGURED state)
-    3. Start Cruiser node (in CONFIGURED state)
-    4. Deactivate Nav2 controller_server
-    5. Activate Cruiser node to take control
+    NOTE: This launch file assumes Gazebo and Nav2 are already running!
+
+    Run in this order:
+    Terminal 1: ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+    Terminal 2: ros2 launch turtlebot3_navigation2 navigation2.launch.py use_sim_time:=True map:=/opt/ros/humble/share/turtlebot3_navigation2/map/map.yaml
+    Terminal 3: ros2 launch the_cruiser cruiser_standalone.launch.py  <-- This file
+    Terminal 4: (optional) ~/dev/ros2_ws/src/internal/the_cruiser/scripts/verify_control.sh
     """
 
-    # Get package directories
-    pkg_turtlebot3_gazebo = get_package_share_directory("turtlebot3_gazebo")
-    pkg_nav2_bringup = get_package_share_directory("nav2_bringup")
     pkg_the_cruiser = get_package_share_directory("the_cruiser")
 
     # ========================================================================
-    # 1. GAZEBO SIMULATION
-    # ========================================================================
-    gazebo_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_turtlebot3_gazebo, "launch", "turtlebot3_world.launch.py")
-        )
-    )
-
-    # ========================================================================
-    # 2. NAV2 BRINGUP (with lifecycle management)
-    # ========================================================================
-    nav2_params = os.path.join(pkg_nav2_bringup, "params", "nav2_params.yaml")
-    nav2_map = "/opt/ros/humble/share/turtlebot3_navigation2/map/map.yaml"
-
-    nav2_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_nav2_bringup, "launch", "navigation_launch.py")
-        ),
-        launch_arguments=[
-            ("use_sim_time", "True"),
-            ("params_file", nav2_params),
-            ("map", nav2_map),
-        ],
-    )
-
-    # ========================================================================
-    # 3. THE CRUISER NODE (Lifecycle Node - starts in CONFIGURED state)
+    # THE CRUISER NODE (Lifecycle Node - starts in CONFIGURED state)
     # ========================================================================
     cruiser_node = Node(
         package="the_cruiser",
@@ -86,7 +37,7 @@ def generate_launch_description():
     )
 
     # ========================================================================
-    # 4. RVIZ VISUALIZATION
+    # RVIZ VISUALIZATION
     # ========================================================================
     rviz_config_file = os.path.join(pkg_the_cruiser, "config", "cruiser.rviz")
     rviz_node = Node(
@@ -98,20 +49,29 @@ def generate_launch_description():
     )
 
     # ========================================================================
-    # 5. LIFECYCLE COORDINATION (deactivate Nav2, activate Cruiser)
-    # This runs after all nodes are spawned
+    # LIFECYCLE COORDINATION
+    # Deactivate Nav2 controller_server, activate Cruiser
     # ========================================================================
-    lifecycle_coordination = OpaqueFunction(function=launch_cruiser)
+    deactivate_nav2_controller = ExecuteProcess(
+        cmd=["ros2", "lifecycle", "set", "/controller_server", "deactivate"],
+        output="screen",
+        shell=False,
+    )
+
+    activate_cruiser = ExecuteProcess(
+        cmd=["ros2", "lifecycle", "set", "/cruiser_node", "activate"],
+        output="screen",
+        shell=False,
+    )
 
     # ========================================================================
     # ASSEMBLE THE LAUNCH DESCRIPTION
     # ========================================================================
     return LaunchDescription(
         [
-            gazebo_launch,
-            nav2_launch,
             cruiser_node,
             rviz_node,
-            lifecycle_coordination,
+            deactivate_nav2_controller,
+            activate_cruiser,
         ]
     )
