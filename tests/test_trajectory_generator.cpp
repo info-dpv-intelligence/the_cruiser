@@ -26,13 +26,18 @@ TEST_F(TrajectoryGeneratorTest, RejectsEmptyInput) {
     EXPECT_TRUE(result.empty()) << "Should return empty path for empty input";
 }
 
-TEST_F(TrajectoryGeneratorTest, RejectsInsufficientPoints) {
-    // Catmull-Rom math needs at least 4 points (start, end, + padding)
-    // Our implementation should handle this gracefully (e.g., by returning empty or passing through)
-    // Current implementation returns empty for < 4 points
+TEST_F(TrajectoryGeneratorTest, HandlesSmallWaypoints) {
+    // < 4 points: Falls back to linear interpolation instead of Catmull-Rom
     std::vector<geometry_msgs::msg::Point> points(3); 
+    points[0].x = 0; points[0].y = 0;
+    points[1].x = 1; points[1].y = 1;
+    points[2].x = 2; points[2].y = 0;
+    
     auto result = generator_->smooth(points);
-    EXPECT_TRUE(result.empty()) << "Should reject inputs with fewer than 4 points";
+    
+    EXPECT_FALSE(result.empty()) << "Should handle < 4 points with linear fallback";
+    EXPECT_NEAR(result.front().v, 0.0, 1e-3) << "Should start at zero velocity";
+    EXPECT_NEAR(result.back().v, 0.0, 1e-3) << "Should end at zero velocity";
 }
 
 TEST_F(TrajectoryGeneratorTest, HandlesDuplicatePoints) {
