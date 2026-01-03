@@ -8,9 +8,11 @@ endif()
 # 1. Find Dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(angles REQUIRED)
@@ -28,9 +30,11 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
 )
 ament_target_dependencies(${PROJECT_NAME}_lib
   rclcpp
+  rclcpp_lifecycle
   nav_msgs
   geometry_msgs
   sensor_msgs
+  diagnostic_msgs
 )
 
 # 4. The Node Executable (Layer 4)
@@ -38,9 +42,11 @@ add_executable(cruiser_node src/nodes/cruiser_node.cpp)
 target_link_libraries(cruiser_node ${PROJECT_NAME}_lib angles::angles)
 ament_target_dependencies(cruiser_node
   rclcpp
+  rclcpp_lifecycle
   nav_msgs
   geometry_msgs
   sensor_msgs
+  diagnostic_msgs
   tf2_ros
   angles
 )
@@ -58,10 +64,13 @@ if(BUILD_TESTING)
 endif()
 
 # 6. Install Rules
-install(TARGETS ${PROJECT_NAME}_lib cruiser_node
+install(TARGETS ${PROJECT_NAME}_lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  RUNTIME DESTINATION lib/${PROJECT_NAME} # Installs the executable
+)
+
+install(TARGETS cruiser_node
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY include/
